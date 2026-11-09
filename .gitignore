@@ -1,0 +1,32 @@
+# Distribution Spark (~250 Mo), à retélécharger depuis archive.apache.org
+Docker-Hadoop/spark-3.1.2-bin-hadoop3.2/
+spark-*-bin-hadoop*/
+
+# Archives
+*.zip
+*.tar.gz
+*.tgz
+
+# Fichiers générés par Spark / Hive en local
+spark-warehouse/
+metastore_db/
+derby.log
+*.log
+
+# Compilation Scala / Java (sbt, Maven, Metals)
+target/
+*.class
+.bsp/
+.bloop/
+.metals/
+
+# Python
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+
+# Éditeurs et OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
