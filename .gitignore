@@ -13,8 +13,9 @@ metastore_db/
 derby.log
 *.log
 
-# Compilation Scala / Java (sbt, Maven, Metals)
+# Compilation Scala / Java (sbt, Maven, Metals, Makefile du TP2)
 target/
+build/
 *.class
 .bsp/
 .bloop/
@@ -27,6 +28,7 @@ __pycache__/
 
 # Éditeurs et OS
 .idea/
-.vscode/
+.vscode/*
+!.vscode/settings.json
 .DS_Store
 Thumbs.db

@@ -1,0 +1,4 @@
+{
+    "java.project.sourcePaths": ["tp2/MapReduce/src"],
+    "java.project.referencedLibraries": ["tp2/MapReduce/lib/**/*.jar"]
+}
