@@ -5,6 +5,7 @@ package ex3;
 // Entrée : cloudera_log.txt dans le répertoire HDFS "logs".
 
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
@@ -32,9 +33,9 @@ public class Ex3Driver {
 
         // TODO : adapter les types à ce qu'émettent le mapper et le reducer.
         job.setMapOutputKeyClass(Text.class);
-        job.setMapOutputValueClass(Text.class);
+        job.setMapOutputValueClass(IntWritable.class);
         job.setOutputKeyClass(Text.class);
-        job.setOutputValueClass(Text.class);
+        job.setOutputValueClass(IntWritable.class);
 
         boolean ok = job.waitForCompletion(true);
         System.exit(ok ? 0 : 1);

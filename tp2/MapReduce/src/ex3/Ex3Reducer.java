@@ -1,17 +1,25 @@
 package ex3;
 
 import java.io.IOException;
+
+import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Reducer;
 
-public class Ex3Reducer extends Reducer<Text, Text,  // TODO : couple (key, value) en sortie du mapper
-                                       Text, Text>  // TODO : couple (key, value) en sortie du reducer
+public class Ex3Reducer extends Reducer<Text, IntWritable, Text, IntWritable>
 {
     // reduce() est appelé une fois par clé distincte, avec toutes ses valeurs.
     @Override
-    public void reduce(Text key, Iterable<Text> values, Context context)
+    public void reduce(Text key, Iterable<IntWritable> values, Context context)
             throws IOException, InterruptedException {
 
-        // TODO : calculer le résultat pour cette clé, puis context.write(...)
+        // sum all the values for this key
+        int sum = 0;
+        for (IntWritable value : values) {
+            sum += value.get();
+        }
+
+        // write the key and the sum to the context
+        context.write(key, new IntWritable(sum));
     }
 }
