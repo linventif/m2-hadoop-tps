@@ -30,14 +30,14 @@ tp2/MapReduce/
 │   ├── hadoop-common-3.2.1.jar            (Path, Text, IntWritable…)
 │   └── hadoop-mapreduce-client-core-3.2.1.jar  (Job, Mapper, Reducer…)
 ├── src/
-│   └── wc/                                ← package "wc"
-│       ├── WcDriver.java
-│       ├── WcMapper.java
-│       └── WcReducer.java
+│   └── ex1/                               ← package "ex1" (un package par exercice)
+│       ├── Ex1Driver.java
+│       ├── Ex1Mapper.java
+│       └── Ex1Reducer.java
 ├── Makefile                               ← compile, crée le jar, lance le job
 └── build/                                 ← généré (ignoré par git)
-    ├── classes/wc/*.class
-    └── wc.jar
+    ├── classes/ex1/*.class
+    └── ex1.jar
 ```
 
 **Dans VS Code** (extension *Extension Pack for Java*), le fichier [`.vscode/settings.json`](../.vscode/settings.json) à la racine du dépôt indique où sont les sources et les jars. L'autocomplétion et le soulignement des erreurs marchent donc sans Maven ni Gradle :
@@ -51,7 +51,7 @@ tp2/MapReduce/
 
 Si VS Code ne trouve pas les classes Hadoop : palette de commandes (Ctrl+Shift+P) → *Java: Clean Java Language Server Workspace*.
 
-> **Le PDF contient des caractères invisibles** (espaces de largeur nulle) dans le code, par exemple après `{` et `throws`. Le code copié-collé depuis le PDF ne compile pas. Les sources de `src/wc/` sont propres.
+> **Le PDF contient des caractères invisibles** (espaces de largeur nulle) dans le code, par exemple après `{` et `throws`. Le code copié-collé depuis le PDF ne compile pas. Les sources de `src/ex1/` sont propres.
 
 ---
 
@@ -68,9 +68,9 @@ Le principe : compter le nombre d'occurrences de chaque mot dans l'œuvre compl�
 
 | Classe | Rôle |
 |---|---|
-| `WcMapper` | reçoit une ligne et émet `(mot, 1)` pour chaque mot (découpage sur `\W+`) |
-| `WcReducer` | reçoit `(mot, [1, 1, 1, …])` et émet `(mot, somme)` |
-| `WcDriver` | configure le job (entrée, sortie, classes, types) et le lance |
+| `Ex1Mapper` | reçoit une ligne et émet `(mot, 1)` pour chaque mot (découpage sur `\W+`) |
+| `Ex1Reducer` | reçoit `(mot, [1, 1, 1, …])` et émet `(mot, somme)` |
+| `Ex1Driver` | configure le job (entrée, sortie, classes, types) et le lance |
 
 Types Hadoop utilisés : `LongWritable` (≈ `long`), `Text` (≈ `String`), `IntWritable` (≈ `int`).
 
@@ -91,33 +91,35 @@ hadoop fs -ls gutenberg
 # -rw-r--r--   3 root supergroup    5856576 ... gutenberg/shakespeare.txt
 ```
 
-### 2 à 4. Projet Java, package `wc`, driver/mapper/reducer
+### 2 à 4. Projet Java, package `ex1`, driver/mapper/reducer
 
-Voir [`MapReduce/src/wc/`](MapReduce/src/wc/).
+> Le sujet nomme le package `wc` (classes `WcDriver`…). Ici, chaque exercice a son package `exN` (classes `ExNDriver`, `ExNMapper`, `ExNReducer`) pour séparer les exercices dans le même projet.
+
+Voir [`MapReduce/src/ex1/`](MapReduce/src/ex1/).
 
 ### 5. Compiler en Java 8 et créer le jar
 
 Depuis `tp2/MapReduce/` :
 
 ```bash
-javac --release 8 -Xlint:-options -cp "lib/*" -d build/classes src/wc/*.java
-jar cvf build/wc.jar -C build/classes wc
+javac --release 8 -Xlint:-options -cp "lib/*" -d build/classes src/ex1/*.java
+jar cvf build/ex1.jar -C build/classes ex1
 ```
 
 - **`-cp "lib/*"` :** ajoute les deux jars Hadoop au classpath pour la compilation.
-- **`-d build/classes` :** les `.class` sont rangés dans `build/classes/wc/`, car le package est `wc`.
-- **`jar cvf build/wc.jar -C build/classes wc` :** équivaut au `jar cvf wc.jar wc` du sujet. `-C` dit à `jar` de se placer dans `build/classes` avant d'ajouter le dossier `wc`.
+- **`-d build/classes` :** les `.class` sont rangés dans `build/classes/ex1/`, car le package est `ex1`.
+- **`jar cvf build/ex1.jar -C build/classes ex1` :** équivaut au `jar cvf wc.jar wc` du sujet. `-C` dit à `jar` de se placer dans `build/classes` avant d'ajouter le dossier `ex1`.
 
 Pour vérifier :
 
 ```bash
-file build/classes/wc/WcDriver.class   # → compiled Java class data, version 52.0 (Java 1.8)
+file build/classes/ex1/Ex1Driver.class   # → compiled Java class data, version 52.0 (Java 1.8)
 ```
 
 ### 6. Copier le jar sur le namenode
 
 ```bash
-docker cp build/wc.jar namenode:/root/
+docker cp build/ex1.jar namenode:/root/
 ```
 
 ### 7. Lancer le job
@@ -125,10 +127,10 @@ docker cp build/wc.jar namenode:/root/
 Dans le namenode :
 
 ```bash
-hadoop jar /root/wc.jar wc.WcDriver gutenberg wordcounts
+hadoop jar /root/ex1.jar ex1.Ex1Driver gutenberg wordcounts
 ```
 
-- **`wc.WcDriver` :** il faut le nom **complet** de la classe principale (package + classe), parce que le jar n'a pas de `Main-Class` dans son manifeste.
+- **`ex1.Ex1Driver` :** il faut le nom **complet** de la classe principale (package + classe), parce que le jar n'a pas de `Main-Class` dans son manifeste.
 - **`gutenberg` / `wordcounts` :** dossiers HDFS d'entrée et de sortie, relatifs à `/user/root`.
 - **Avertissement `Implement the Tool interface…` :** il est normal, le code du sujet n'utilise pas `ToolRunner`.
 - **Dossier de sortie :** `wordcounts` ne doit **pas** exister. Avant de relancer : `hadoop fs -rm -r wordcounts`.
@@ -180,7 +182,7 @@ Résultats obtenus :
 Depuis `tp2/MapReduce/` :
 
 ```bash
-make            # étape 5 : compile + crée build/wc.jar
+make            # étape 5 : compile + crée build/ex1.jar
 make run        # étapes 6 et 7 : docker cp + hadoop jar (supprime d'abord wordcounts dans HDFS)
 make result     # étape 8 : 20 premières lignes de part-r-00000
 ```
@@ -188,5 +190,6 @@ make result     # étape 8 : 20 premières lignes de part-r-00000
 Les variables permettent de réutiliser le Makefile pour les exercices suivants, par exemple :
 
 ```bash
-make run PKG=index DRIVER=IndexDriver IN=sherlock OUT=index ARGS=gentleman
+make run PKG=ex2 IN=mots OUT=anagrammes          # DRIVER déduit : Ex2Driver
+make run PKG=ex4 IN=sherlock OUT=index ARGS=gentleman
 ```

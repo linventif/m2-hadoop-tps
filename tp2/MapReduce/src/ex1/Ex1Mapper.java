@@ -1,4 +1,4 @@
-package wc;
+package ex1;
 
 import java.io.IOException;
 import org.apache.hadoop.io.IntWritable;
@@ -6,7 +6,7 @@ import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Mapper;
 
-public class WcMapper extends Mapper<LongWritable, Text, // Ne pas modifier !
+public class Ex1Mapper extends Mapper<LongWritable, Text, // Ne pas modifier !
                                      Text, IntWritable>  // Couple (key, value) en sortie du mapper
 {
     // key est l'offset, adresse relative depuis le début du fichier (Ne pas modifier !).

@@ -6,11 +6,14 @@
 #   make result          affiche les 20 premières lignes du résultat
 #   make clean           supprime build/
 #
+# Un package par exercice : src/ex1, src/ex2… avec les classes Ex1Driver, Ex2Driver…
 # Par défaut : exercice 1 (WordCount). Pour un autre exercice, surcharger les variables :
-#   make run PKG=index DRIVER=IndexDriver IN=sherlock OUT=index ARGS=gentleman
+#   make run PKG=ex2 IN=mots OUT=anagrammes
+#   make run PKG=ex4 IN=sherlock OUT=index ARGS=gentleman
+# DRIVER se déduit de PKG (ex2 → Ex2Driver) ; le préciser seulement s'il a un autre nom.
 
-PKG    ?= wc
-DRIVER ?= WcDriver
+PKG    ?= ex1
+DRIVER ?= $(shell echo $(PKG) | sed 's/^./\U&/')Driver
 IN     ?= gutenberg
 OUT    ?= wordcounts
 ARGS   ?=
