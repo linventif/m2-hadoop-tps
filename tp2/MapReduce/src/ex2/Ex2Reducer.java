@@ -1,8 +1,16 @@
 package ex2;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Reducer;
+
 
 public class Ex2Reducer extends Reducer<Text, Text,  // Couple (key, value) en sortie du mapper
                                        Text, Text>  // Couple (key, value) en sortie du reducer
@@ -14,17 +22,20 @@ public class Ex2Reducer extends Reducer<Text, Text,  // Couple (key, value) en s
             throws IOException, InterruptedException {
 
         // remove duplicates
-        java.util.Set<String> uniqueValues = new java.util.HashSet<>();
+        Set<String> uniqueValues = new HashSet<>();
         for (Text value : values) {
             uniqueValues.add(value.toString());
         }
 
+        // only keep words with more than 1 occurrence
+        uniqueValues.removeIf(word -> Collections.frequency((Collection<?>) values, new Text(word)) <= 1);
+
         // sort by alphabetical order
-        java.util.List<String> sortedValues = new java.util.ArrayList<>();
+        List<String> sortedValues = new ArrayList<>();
         for (String value : uniqueValues) {
             sortedValues.add(value.toString());
         }
-        java.util.Collections.sort(sortedValues);
+        Collections.sort(sortedValues);
 
         // convert the set back to a string
         String sb = String.join(", ", sortedValues);
