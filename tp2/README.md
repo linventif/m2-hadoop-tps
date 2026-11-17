@@ -30,15 +30,56 @@ tp2/MapReduce/
 │   ├── hadoop-common-3.2.1.jar            (Path, Text, IntWritable…)
 │   └── hadoop-mapreduce-client-core-3.2.1.jar  (Job, Mapper, Reducer…)
 ├── src/
-│   └── ex1/                               ← package "ex1" (un package par exercice)
-│       ├── Ex1Driver.java
-│       ├── Ex1Mapper.java
-│       └── Ex1Reducer.java
-├── Makefile                               ← compile, crée le jar, lance le job
+│   ├── ex1/                               ← un package par exercice
+│   │   ├── Ex1Driver.java
+│   │   ├── Ex1Mapper.java
+│   │   └── Ex1Reducer.java
+│   ├── ex2/ … ex5/                        (Ex2Driver, Ex2Mapper, Ex2Reducer…)
+├── Makefile                               ← compile, envoie les données, lance les jobs, rapatrie les résultats
 └── build/                                 ← généré (ignoré par git)
-    ├── classes/ex1/*.class
-    └── ex1.jar
+    ├── classes/exN/*.class
+    └── exN.jar
 ```
+
+### Données et résultats : `tp2/data/exN` → `tp2/out/exN`
+
+La même arborescence existe en local et dans HDFS (chemins HDFS relatifs à `/user/root`) :
+
+```
+tp2/data/                                  local                        HDFS
+├── ex1/shakespeare.txt                    tp2/data/exN/  ── put ──►   tp2/data/exN/   (entrée du job)
+├── ex2/liste_mots.txt                     tp2/out/exN/   ◄── get ──   tp2/out/exN/    (résultat du job)
+├── ex3/cloudera_log.txt
+├── ex4/sherlock_numerote.txt              ← généré par `cat -n` depuis le fichier ci-dessous
+└── The_Adventures_of_Sherlock_Holmes.txt  ← hors de ex4/ : Hadoop lit TOUS les fichiers du dossier d'entrée
+tp2/out/
+├── ex1/  ex2/  ex3/                       part-r-00000 + _SUCCESS
+└── ex4/<mot>/                             un index par mot : burglar, murderer, bachelor, gentleman, innocent
+```
+
+Depuis `tp2/MapReduce/`, **une commande fait tout** : compilation, envoi des données, job, puis récupération du résultat dans `tp2/out/` :
+
+```bash
+make tout        # ex1 à ex4
+make ex2         # un seul exercice
+```
+
+Étapes séparées, pour un exercice :
+
+| Commande | Effet |
+|---|---|
+| `make PKG=ex2` | compile `src/ex2` en Java 8 → `build/ex2.jar` |
+| `make upload PKG=ex2` | `tp2/data/ex2` → `/root/tp2/data/ex2` (namenode) → `tp2/data/ex2` (HDFS) |
+| `make run PKG=ex2` | copie le jar dans le namenode, supprime `tp2/out/ex2` dans HDFS, lance le job |
+| `make fetch PKG=ex2` | `tp2/out/ex2` (HDFS) → namenode → `tp2/out/ex2` (local) |
+| `make result PKG=ex2` | 20 premières lignes de `tp2/out/ex2/part-r-00000` |
+
+- **Nom du Driver :** il est déduit du package (`ex2` → `Ex2Driver`).
+- **Arguments :** `ARGS=` ajoute des arguments au job, comme le mot à indexer de l'exercice 4 :
+  ```bash
+  make run fetch PKG=ex4 OUT=tp2/out/ex4/gentleman ARGS=gentleman
+  ```
+- **Fichiers de données non versionnés :** `cloudera_log.txt` (38 Mo) et le texte de Sherlock Holmes ne sont pas dans git. Il faut les placer à la main dans `tp2/data/`.
 
 **Dans VS Code** (extension *Extension Pack for Java*), le fichier [`.vscode/settings.json`](../.vscode/settings.json) à la racine du dépôt indique où sont les sources et les jars. L'autocomplétion et le soulignement des erreurs marchent donc sans Maven ni Gradle :
 
@@ -74,30 +115,25 @@ Le principe : compter le nombre d'occurrences de chaque mot dans l'œuvre compl�
 
 Types Hadoop utilisés : `LongWritable` (≈ `long`), `Text` (≈ `String`), `IntWritable` (≈ `int`).
 
-### 1. Mettre Shakespeare dans HDFS (`gutenberg`)
+### 1. Mettre Shakespeare dans HDFS
+
+Le sujet nomme le dossier HDFS `gutenberg`. Ici, on suit l'arborescence commune `tp2/data/ex1`. C'est ce que fait `make upload PKG=ex1`.
 
 Sur la machine hôte :
 
 ```bash
-docker cp tp2/shakespeare.txt namenode:/root/
+docker exec namenode mkdir -p /root/tp2/data
+docker cp tp2/data/ex1 namenode:/root/tp2/data/ex1
 ```
 
 Dans le namenode :
 
 ```bash
-hadoop fs -mkdir -p gutenberg
-hadoop fs -put /root/shakespeare.txt gutenberg/
-hadoop fs -ls gutenberg
-# -rw-r--r--   3 root supergroup    5856576 ... gutenberg/shakespeare.txt
+hadoop fs -mkdir -p tp2/data
+hadoop fs -put /root/tp2/data/ex1 tp2/data/ex1
+hadoop fs -ls tp2/data/ex1
+# -rw-r--r--   3 root supergroup    5856576 ... tp2/data/ex1/shakespeare.txt
 ```
-
-<!--
-
-$ make run PKG=ex3 IN=data/cloudera_log.txt OUT=logs
-docker exec namenode hadoop fs -ls -R
-docker cp tp2/cloudera_log.txt namenode:/root/                                   # machine hôte
-docker exec namenode bash -c 'hadoop fs -mkdir -p logs && hadoop fs -put /root/cloudera_log.txt logs/'
- -->
 
 ### 2 à 4. Projet Java, package `ex1`, driver/mapper/reducer
 
@@ -135,13 +171,13 @@ docker cp build/ex1.jar namenode:/root/
 Dans le namenode :
 
 ```bash
-hadoop jar /root/ex1.jar ex1.Ex1Driver gutenberg wordcounts
+hadoop jar /root/ex1.jar ex1.Ex1Driver tp2/data/ex1 tp2/out/ex1
 ```
 
 - **`ex1.Ex1Driver` :** il faut le nom **complet** de la classe principale (package + classe), parce que le jar n'a pas de `Main-Class` dans son manifeste.
-- **`gutenberg` / `wordcounts` :** dossiers HDFS d'entrée et de sortie, relatifs à `/user/root`.
+- **`tp2/data/ex1` / `tp2/out/ex1` :** dossiers HDFS d'entrée et de sortie, relatifs à `/user/root` (`gutenberg` et `wordcounts` dans le sujet).
 - **Avertissement `Implement the Tool interface…` :** il est normal, le code du sujet n'utilise pas `ToolRunner`.
-- **Dossier de sortie :** `wordcounts` ne doit **pas** exister. Avant de relancer : `hadoop fs -rm -r wordcounts`.
+- **Dossier de sortie :** `tp2/out/ex1` ne doit **pas** exister. Avant de relancer : `hadoop fs -rm -r tp2/out/ex1` (`make run` le fait automatiquement).
 
 Compteurs intéressants affichés à la fin du job :
 
@@ -156,13 +192,13 @@ Compteurs intéressants affichés à la fin du job :
 ### 8. Vérifier le résultat
 
 ```bash
-hadoop fs -ls wordcounts
+hadoop fs -ls tp2/out/ex1
 # _SUCCESS          ← fichier vide : le job a réussi
 # part-r-00000      ← résultat du reducer n°0
 
-hadoop fs -cat wordcounts/part-r-00000 | head -n 20                     # début (ordre alphabétique)
-hadoop fs -cat wordcounts/part-r-00000 | grep -P "^love\t"              # un mot précis
-hadoop fs -cat wordcounts/part-r-00000 | sort -t$'\t' -k2 -nr | head    # les 10 mots les plus fréquents
+hadoop fs -cat tp2/out/ex1/part-r-00000 | head -n 20                     # début (ordre alphabétique)
+hadoop fs -cat tp2/out/ex1/part-r-00000 | grep -P "^love\t"              # un mot précis
+hadoop fs -cat tp2/out/ex1/part-r-00000 | sort -t$'\t' -k2 -nr | head    # les 10 mots les plus fréquents
 ```
 
 Résultats obtenus :
@@ -190,14 +226,23 @@ Résultats obtenus :
 Depuis `tp2/MapReduce/` :
 
 ```bash
-make            # étape 5 : compile + crée build/ex1.jar
-make run        # étapes 6 et 7 : docker cp + hadoop jar (supprime d'abord wordcounts dans HDFS)
-make result     # étape 8 : 20 premières lignes de part-r-00000
+make ex1                 # étapes 1 et 5 à 8 : upload + compile + job + résultat dans tp2/out/ex1/
+make result PKG=ex1      # 20 premières lignes du résultat
 ```
 
-Les variables permettent de réutiliser le Makefile pour les exercices suivants, par exemple :
+---
 
-```bash
-make run PKG=ex2 IN=mots OUT=anagrammes          # DRIVER déduit : Ex2Driver
-make run PKG=ex4 IN=sherlock OUT=index ARGS=gentleman
-```
+## Résultats des exercices 2 à 4
+
+Obtenus avec `make tout` (fichiers dans `tp2/out/`).
+
+| Exercice | Sortie | Résultat |
+|---|---|---|
+| 2 – Anagrammes | `out/ex2/part-r-00000` | 17 groupes, par ex. `acenr  ancre, caner, carne, cerna, crane, ecran, encra, nacre, rance` |
+| 3 – Hits par quart d'heure | `out/ex3/part-r-00000` | 52 quarts d'heure de `10:30` à `23:15` inclus, 172 757 hits (lignes hors plage et mal formées ignorées) |
+| 4 – Index | `out/ex4/<mot>/part-r-00000` | burglar 1, murderer 5, bachelor 8, gentleman 45, innocent 17 entrées, **identique au sujet** |
+
+Choix de conception :
+- **Exercice 2 :** texte mis en minuscules et sans accents (`écran` → `ecran`). Les doublons sont supprimés et les groupes d'un seul mot sont ignorés.
+- **Exercice 3 :** clé `jj/Mois/aaaa:HH:mm` au début du quart d'heure. Le quart qui commence à 23h15 est inclus. Un combiner fait des sommes partielles avant le shuffle.
+- **Exercice 4 :** lignes numérotées avec `cat -n`. Le mot à indexer est transmis via `job.getConfiguration()` **avant** `waitForCompletion`. Une entrée correspond à une ligne contenant le mot.
