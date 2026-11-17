@@ -31,6 +31,12 @@ public class Ex3Driver {
         job.setMapperClass(Ex3Mapper.class);
         job.setReducerClass(Ex3Reducer.class);
 
+        // Combiner : somme partielle côté mapper, avant le shuffle. Chaque mapper envoie
+        // un seul (quart d'heure, somme) par clé au lieu de milliers de (quart d'heure, 1).
+        // Possible car l'addition est associative et commutative, et parce que le reducer
+        // a les mêmes types en entrée et en sortie (Text, IntWritable).
+        job.setCombinerClass(Ex3Reducer.class);
+
         // TODO : adapter les types à ce qu'émettent le mapper et le reducer.
         job.setMapOutputKeyClass(Text.class);
         job.setMapOutputValueClass(IntWritable.class);

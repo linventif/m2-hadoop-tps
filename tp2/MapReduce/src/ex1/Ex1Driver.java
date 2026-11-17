@@ -28,6 +28,9 @@ public class Ex1Driver {
         job.setMapperClass(Ex1Mapper.class);
         job.setReducerClass(Ex1Reducer.class);
 
+        // Combiner : somme partielle côté mapper avant le shuffle (voir Ex3Driver).
+        job.setCombinerClass(Ex1Reducer.class);
+
         // Indication des types pour le couple (key, value) en sortie du mapper.
         job.setMapOutputKeyClass(Text.class);
         job.setMapOutputValueClass(IntWritable.class);
