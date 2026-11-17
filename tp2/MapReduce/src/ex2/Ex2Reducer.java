@@ -1,46 +1,35 @@
 package ex2;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
+import java.util.TreeSet;
 
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Reducer;
 
-
 public class Ex2Reducer extends Reducer<Text, Text,  // Couple (key, value) en sortie du mapper
                                        Text, Text>  // Couple (key, value) en sortie du reducer
 {
-    // key est la clé extraite du mapper.
-    // values est la liste des valeurs issues des mappers pour chaque occurrence de key.
+    // key est la clé extraite du mapper (les lettres du mot, triées).
+    // values est la liste des mots qui ont ces lettres (avec doublons).
+    // values ne se parcourt qu'une fois et n'est pas une Collection.
     @Override
     public void reduce(Text key, Iterable<Text> values, Context context)
             throws IOException, InterruptedException {
 
-        // remove duplicates
-        Set<String> uniqueValues = new HashSet<>();
+        // remove duplicates and sort by alphabetical order (TreeSet does both).
+        // value.toString() makes a copy: Hadoop reuses the same Text object at each iteration.
+        Set<String> uniqueValues = new TreeSet<>();
         for (Text value : values) {
             uniqueValues.add(value.toString());
         }
 
-        // only keep words with more than 1 occurrence
-        uniqueValues.removeIf(word -> Collections.frequency((Collection<?>) values, new Text(word)) <= 1);
-
-        // sort by alphabetical order
-        List<String> sortedValues = new ArrayList<>();
-        for (String value : uniqueValues) {
-            sortedValues.add(value.toString());
+        // a group with a single word is not a list of anagrams
+        if (uniqueValues.size() < 2) {
+            return;
         }
-        Collections.sort(sortedValues);
 
-        // convert the set back to a string
-        String sb = String.join(", ", sortedValues);
-
-        // Ecriture du résultat
-        context.write(key, new Text(sb));
+        // Ecriture du résultat : "aeimr    aimer, maire, marie, ramie"
+        context.write(key, new Text(String.join(", ", uniqueValues)));
     }
 }

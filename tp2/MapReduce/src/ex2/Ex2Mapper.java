@@ -27,15 +27,10 @@ public class Ex2Mapper extends Mapper<LongWritable, Text, // Ne pas modifier !
         // Découpe la chaîne de caractères.
         for (String word : line.split("\\W+"))
             if (word.length() > 0) {
-                // mot en minuscule
-                word = word.toLowerCase();
-                String keyWord = word.toLowerCase();
-                // supression des caractères non alphabétiques
-                keyWord = keyWord.replaceAll("[^a-zA-Z]", "");
-                // triage des lettres du mot ana -> aan
-                char[] chars = keyWord.toCharArray();
+                // la ligne est déjà en minuscules et sans accents : on trie les lettres, ana -> aan
+                char[] chars = word.toCharArray();
                 java.util.Arrays.sort(chars);
-                keyWord = new String(chars);
+                String keyWord = new String(chars);
 
                 // Ecriture du couple clé/valeur en sortie du mapper.
                 context.write(new Text(keyWord), new Text(word));
