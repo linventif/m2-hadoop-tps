@@ -91,6 +91,14 @@ hadoop fs -ls gutenberg
 # -rw-r--r--   3 root supergroup    5856576 ... gutenberg/shakespeare.txt
 ```
 
+<!--
+
+$ make run PKG=ex3 IN=data/cloudera_log.txt OUT=logs
+docker exec namenode hadoop fs -ls -R
+docker cp tp2/cloudera_log.txt namenode:/root/                                   # machine hôte
+docker exec namenode bash -c 'hadoop fs -mkdir -p logs && hadoop fs -put /root/cloudera_log.txt logs/'
+ -->
+
 ### 2 à 4. Projet Java, package `ex1`, driver/mapper/reducer
 
 > Le sujet nomme le package `wc` (classes `WcDriver`…). Ici, chaque exercice a son package `exN` (classes `ExNDriver`, `ExNMapper`, `ExNReducer`) pour séparer les exercices dans le même projet.
