@@ -5,6 +5,7 @@ package ex5;
 // par des clients différents ?
 
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
@@ -29,12 +30,17 @@ public class Ex5Driver {
 
         job.setMapperClass(Ex5Mapper.class);
         job.setReducerClass(Ex5Reducer.class);
+        // Pas de job.setCombinerClass(Ex5Reducer.class) : le reducer compte des clients
+        // DISTINCTS. Additionner des comptes partiels compterait deux fois un client
+        // vu par deux mappers, et les types de sortie (IntWritable) ne sont pas ceux
+        // de l'entrée du reducer (Text).
 
-        // TODO : adapter les types à ce qu'émettent le mapper et le reducer.
+        // Sortie du mapper : (couple "x,y", id_client).
         job.setMapOutputKeyClass(Text.class);
         job.setMapOutputValueClass(Text.class);
+        // Sortie du reducer : (couple "x,y", nombre de clients différents).
         job.setOutputKeyClass(Text.class);
-        job.setOutputValueClass(Text.class);
+        job.setOutputValueClass(IntWritable.class);
 
         boolean ok = job.waitForCompletion(true);
         System.exit(ok ? 0 : 1);

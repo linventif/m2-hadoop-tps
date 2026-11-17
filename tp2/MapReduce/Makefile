@@ -5,8 +5,8 @@
 #   local  tp2/out/exN/   ◄── hadoop fs -get + docker cp ──  HDFS  tp2/out/exN/    (résultat)
 #
 # Tout lancer (depuis tp2/MapReduce/) :
-#   make tout            ex1 à ex4 : envoi des données, job, récupération des résultats
-#   make ex1             un seul exercice (idem ex2, ex3, ex4)
+#   make tout            ex1 à ex5 : envoi des données, job, récupération des résultats
+#   make ex1             un seul exercice (idem ex2, ex3, ex4, ex5)
 #
 # Étapes séparées, pour un exercice (PKG=ex1 par défaut) :
 #   make                 compile src/$(PKG) en Java 8 → build/$(PKG).jar
@@ -37,7 +37,7 @@ LOCAL_OUT := ../$(patsubst tp2/%,%,$(OUT))
 # hadoop fs sans les lignes INFO (SASL…) ; hadoop jar garde ses logs de progression.
 HDFS      := docker exec -e HADOOP_ROOT_LOGGER=WARN,console $(CONTAINER) hadoop fs
 
-.PHONY: all upload deploy run fetch result clean tout ex1 ex2 ex3 ex4
+.PHONY: all upload deploy run fetch result clean tout ex1 ex2 ex3 ex4 ex5
 
 all: $(JAR)
 
@@ -82,7 +82,7 @@ clean:
 
 # ─── Tout lancer ───────────────────────────────────────────────────────────
 
-tout: ex1 ex2 ex3 ex4
+tout: ex1 ex2 ex3 ex4 ex5
 
 ex1 ex2 ex3:
 	$(MAKE) upload run fetch PKG=$@
@@ -101,3 +101,11 @@ ex4: ../data/ex4/sherlock_numerote.txt
 	@for mot in $(MOTS_EX4); do \
 	  printf '  %-10s %s\n' $$mot $$(cut -f2 ../out/ex4/$$mot/part-r-00000 | tr ',' '\n' | grep -c .); \
 	done
+
+# Exercice 5 : le sujet ne fournit pas de fichier, on le génère (graine fixe, toujours identique).
+../data/ex5/commandes.txt: ../scripts/generer_commandes.py
+	mkdir -p $(@D)
+	python3 -I $< $@ 2000
+
+ex5: ../data/ex5/commandes.txt
+	$(MAKE) upload run fetch PKG=ex5

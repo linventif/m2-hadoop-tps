@@ -51,16 +51,17 @@ tp2/data/                                  local                        HDFS
 ├── ex2/liste_mots.txt                     tp2/out/exN/   ◄── get ──   tp2/out/exN/    (résultat du job)
 ├── ex3/cloudera_log.txt
 ├── ex4/sherlock_numerote.txt              ← généré par `cat -n` depuis le fichier ci-dessous
+├── ex5/commandes.txt                      ← généré par tp2/scripts/generer_commandes.py (le sujet n'en fournit pas)
 └── The_Adventures_of_Sherlock_Holmes.txt  ← hors de ex4/ : Hadoop lit TOUS les fichiers du dossier d'entrée
 tp2/out/
-├── ex1/  ex2/  ex3/                       part-r-00000 + _SUCCESS
+├── ex1/  ex2/  ex3/  ex5/                 part-r-00000 + _SUCCESS
 └── ex4/<mot>/                             un index par mot : burglar, murderer, bachelor, gentleman, innocent
 ```
 
 Depuis `tp2/MapReduce/`, **une commande fait tout** : compilation, envoi des données, job, puis récupération du résultat dans `tp2/out/` :
 
 ```bash
-make tout        # ex1 à ex4
+make tout        # ex1 à ex5
 make ex2         # un seul exercice
 ```
 
@@ -232,7 +233,7 @@ make result PKG=ex1      # 20 premières lignes du résultat
 
 ---
 
-## Résultats des exercices 2 à 4
+## Résultats des exercices 2 à 5
 
 Obtenus avec `make tout` (fichiers dans `tp2/out/`).
 
@@ -241,8 +242,25 @@ Obtenus avec `make tout` (fichiers dans `tp2/out/`).
 | 2 – Anagrammes | `out/ex2/part-r-00000` | 17 groupes, par ex. `acenr  ancre, caner, carne, cerna, crane, ecran, encra, nacre, rance` |
 | 3 – Hits par quart d'heure | `out/ex3/part-r-00000` | 52 quarts d'heure de `10:30` à `23:15` inclus, 172 757 hits (lignes hors plage et mal formées ignorées) |
 | 4 – Index | `out/ex4/<mot>/part-r-00000` | burglar 1, murderer 5, bachelor 8, gentleman 45, innocent 17 entrées, **identique au sujet** |
+| 5 – Couples de produits | `out/ex5/part-r-00000` | 435 couples ; les plus fréquents : `P01,P02` 119 clients, `P10,P11` 114, `P05,P06` 111 |
 
 Choix de conception :
 - **Exercice 2 :** texte mis en minuscules et sans accents (`écran` → `ecran`). Les doublons sont supprimés et les groupes d'un seul mot sont ignorés.
 - **Exercice 3 :** clé `jj/Mois/aaaa:HH:mm` au début du quart d'heure. Le quart qui commence à 23h15 est inclus. Un combiner fait des sommes partielles avant le shuffle.
 - **Exercice 4 :** lignes numérotées avec `cat -n`. Le mot à indexer est transmis via `job.getConfiguration()` **avant** `waitForCompletion`. Une entrée correspond à une ligne contenant le mot.
+
+### Exercice 5 – Couples de produits commandés par des clients différents
+
+Le sujet ne fournit pas de fichier. [`scripts/generer_commandes.py`](scripts/generer_commandes.py) en génère un au format `id_cde;id_client;id_prod_1;…;id_prod_n` : 2 000 commandes, 150 clients, 30 produits, avec une graine fixe pour obtenir toujours le même fichier. `make ex5` le crée s'il manque.
+
+```
+MAP   C00001;CL029;P24;P01;P02   ──►   (P01,P02 → CL029) (P01,P24 → CL029) (P02,P24 → CL029)
+SHUFFLE                                 P01,P02 → [CL029, CL114, CL029, …]
+REDUCE                                  (P01,P02, nombre de clients DISTINCTS) → P01,P02  119
+```
+
+- **Mapper :** les produits de la commande sont dédoublonnés et triés avec un `TreeSet`. `(P02, P01)` et `(P01, P02)` donnent donc le même couple `P01,P02`, et un produit en double ne forme pas de couple avec lui-même. Le mapper émet ensuite `(couple, client)` pour chaque couple `x < y`.
+- **Reducer :** il compte les clients **distincts** avec un `Set`. Un client qui commande plusieurs fois le même couple ne compte qu'une fois.
+- **Lignes ignorées :** les commandes de moins de 2 produits et les lignes mal formées sont comptées dans le compteur `Ex5 / commandes sans couple ou mal formees` (196 ici).
+- **Pas de combiner :** additionner des comptes partiels compterait deux fois un client vu par deux mappers. En plus, la sortie du reducer (`IntWritable`) n'a pas le type de son entrée (`Text`).
+- **Vérification :** le résultat est identique à un calcul indépendant en Python (435 couples).
